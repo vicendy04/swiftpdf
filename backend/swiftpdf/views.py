@@ -4,9 +4,9 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from core.minio import get_put_url
-from core.models import Task
-from core.serializers import TaskCreateSerializer, TaskSerializer, UploadInitSerializer
+from .minio import get_put_url
+from .models import Task
+from .serializers import TaskCreateSerializer, TaskSerializer, UploadInitSerializer
 
 
 @api_view(["GET"])
