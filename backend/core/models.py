@@ -4,20 +4,22 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 
+class Status(models.TextChoices):
+    PENDING = "pending"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class Tool(models.TextChoices):
+    MERGE = "merge"
+    SPLIT = "split"
+
+
 class User(AbstractUser):
     pass
 
 
 class Task(models.Model):
-    class Status(models.TextChoices):
-        PENDING = "pending"
-        COMPLETED = "completed"
-        CANCELLED = "cancelled"
-
-    class Tool(models.TextChoices):
-        MERGE = "merge"
-        SPILIT = "spilit"
-
     task_id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True)
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING

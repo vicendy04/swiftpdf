@@ -11,3 +11,4 @@ wheels/
 
 # Add more
 *.sqlite3
+.env

@@ -1,8 +1,9 @@
 from django.urls import path
 
-from .views import create_task, get_task
+from core import views
 
 urlpatterns = [
-    path("tasks/", create_task, name="task-create"),
-    path("tasks/<uuid:task_id>/", get_task, name="task-get"),
+    path("tasks/", views.create_task, name="task-create"),
+    path("tasks/<uuid:task_id>/", views.get_task, name="task-get"),
+    path("upload/", views.init_upload, name="init-upload"),
 ]
