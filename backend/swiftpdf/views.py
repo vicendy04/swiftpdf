@@ -6,7 +6,10 @@ from rest_framework.response import Response
 
 from .minio import get_put_url
 from .models import Task
+from .publisher import Publisher
 from .serializers import TaskCreateSerializer, TaskSerializer, UploadInitSerializer
+
+publisher = Publisher()
 
 
 @api_view(["GET"])
@@ -21,6 +24,8 @@ def create_task(request):
     serializer = TaskCreateSerializer(data=request.data)
     if serializer.is_valid():
         serializer.save()
+        # queue
+        publisher.publish("abc")
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "worker",
     "swiftpdf",
 ]
 
@@ -127,12 +128,22 @@ STATIC_URL = "static/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Custom config
+# My config
+
+# Custom user
 AUTH_USER_MODEL = "swiftpdf.User"
 
+# Minio
 load_dotenv()
 MINIO_HOST = os.getenv("MINIO_HOST", "localhost:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
 MINIO_BUCKET_NAME = os.getenv("MINIO_BUCKET_NAME", "media")
 USE_MINIO_HTTPS = False
+
+# RabbitMQ
+RABBITMQ_URL = "amqp://guest:guest@localhost:5672/"
+REQUEST_EXCHANGE = "request_exchange"
+REPLY_EXCHANGE = "reply_exchange"
+REQUEST_QUEUE = "request_queue"
+REPLY_QUEUE = "reply_queue"

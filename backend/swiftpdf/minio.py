@@ -1,14 +1,8 @@
 from datetime import timedelta
 
 from django.conf import settings
-from minio import Minio
 
-minio_client = Minio(
-    endpoint=settings.MINIO_HOST,
-    access_key=settings.MINIO_ACCESS_KEY,
-    secret_key=settings.MINIO_SECRET_KEY,
-    secure=settings.USE_MINIO_HTTPS,
-)
+from .setup import minio_client
 
 bucket_name = settings.MINIO_BUCKET_NAME
 
