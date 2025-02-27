@@ -13,24 +13,14 @@ RABBITMQ_URL = "amqp://guest:guest@localhost:5672/"
 parameters = pika.URLParameters(RABBITMQ_URL)
 request_exchange = "request_exchange"
 request_queue = "request_queue"
-
-
-def callback(channel, method, header, body):
-    result_data = json.loads(body)
-
-    process_pdf_task(result_data)
-
-    # then reply
-    # correlation_id = header.correlation_id
-
-    channel.basic_ack(delivery_tag=method.delivery_tag)
+reply_exchange = "reply_exchange"
 
 
 def main():
     connection = pika.BlockingConnection(parameters)
     channel = connection.channel()
 
-    # check if exist
+    # Declare queue to consume if not exist
     channel.queue_declare(queue=request_queue)
     channel.queue_bind(
         exchange=request_exchange,
@@ -45,6 +35,27 @@ def main():
 
     print("Result processor started. Waiting for results...")
     channel.start_consuming()
+
+
+def callback(channel, method, props, body):
+    result_data = json.loads(body)
+
+    result_objects = process_pdf_task(result_data)
+
+    # then reply
+    properties = pika.BasicProperties(
+        content_type="application/json",
+        delivery_mode=pika.DeliveryMode.Persistent,
+        correlation_id=props.correlation_id,
+    )
+    channel.basic_publish(
+        exchange=reply_exchange,
+        routing_key=props.reply_to,
+        body=json.dumps(result_objects),
+        properties=properties,
+    )
+
+    channel.basic_ack(delivery_tag=method.delivery_tag)
 
 
 if __name__ == "__main__":

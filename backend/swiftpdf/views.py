@@ -4,11 +4,11 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .minio import get_put_url
+from .helper import create_task_message
+from .messaging.publisher import Publisher
 from .models import Task
-from .publisher import Publisher
 from .serializers import TaskCreateSerializer, TaskSerializer, UploadInitSerializer
-from .utils import create_task_message
+from .services.minio import get_put_url
 
 publisher = Publisher()
 

@@ -3,7 +3,6 @@ import json
 import pika
 
 RABBITMQ_URL = "amqp://guest:guest@localhost:5672/"
-# queue_name = "response-queue"  # khong duoc ai dung, dung de delcare cai queue phan hoi
 parameters = pika.URLParameters(RABBITMQ_URL)
 request_exchange = "request_exchange"
 
@@ -16,8 +15,9 @@ class Publisher:
     def publish(self, task_id: str, body: dict) -> None:
         properties = pika.BasicProperties(
             content_type="application/json",
-            delivery_mode=pika.DeliveryMode.Transient,
+            delivery_mode=pika.DeliveryMode.Persistent,
             correlation_id=task_id,
+            reply_to="reply",
         )
         self.channel.basic_publish(
             exchange=request_exchange,
