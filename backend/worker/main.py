@@ -1,6 +1,7 @@
 import json
 
 import pika
+from pdf_utils import process_pdf_task
 
 # REPLY_EXCHANGE = "replies"
 
@@ -16,12 +17,11 @@ request_queue = "request_queue"
 
 def callback(channel, method, header, body):
     result_data = json.loads(body)
-    correlation_id = header.correlation_id
-    print(result_data)
-    print(correlation_id)
 
-    # Lưu kết quả vào database
+    process_pdf_task(result_data)
+
     # then reply
+    # correlation_id = header.correlation_id
 
     channel.basic_ack(delivery_tag=method.delivery_tag)
 
@@ -39,11 +39,16 @@ def main():
     )
 
     channel.basic_qos(prefetch_count=1)
-    channel.basic_consume(queue=request_queue, on_message_callback=callback)
+    channel.basic_consume(
+        queue=request_queue, on_message_callback=callback, auto_ack=False
+    )
 
     print("Result processor started. Waiting for results...")
     channel.start_consuming()
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("Interrupted")

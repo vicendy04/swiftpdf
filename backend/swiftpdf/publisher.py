@@ -13,10 +13,11 @@ class Publisher:
         self.connection = pika.BlockingConnection(parameters)
         self.channel = self.connection.channel()
 
-    def publish(self, body: str) -> None:
-        print(body)
+    def publish(self, task_id: str, body: dict) -> None:
         properties = pika.BasicProperties(
-            content_type="text/plain", delivery_mode=pika.DeliveryMode.Transient
+            content_type="application/json",
+            delivery_mode=pika.DeliveryMode.Transient,
+            correlation_id=task_id,
         )
         self.channel.basic_publish(
             exchange=request_exchange,

@@ -30,6 +30,7 @@ class Task(models.Model):
     input_files = models.JSONField(default=list)
     output_files = models.JSONField(default=list)
     error = models.CharField(max_length=200, null=True, blank=True)
+    ranges = models.JSONField(default=list)
 
     def __str__(self):
         return f"Task {self.task_id} - {self.status}"

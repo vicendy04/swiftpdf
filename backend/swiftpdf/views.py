@@ -8,6 +8,7 @@ from .minio import get_put_url
 from .models import Task
 from .publisher import Publisher
 from .serializers import TaskCreateSerializer, TaskSerializer, UploadInitSerializer
+from .utils import create_task_message
 
 publisher = Publisher()
 
@@ -23,9 +24,9 @@ def get_task(request, task_id):
 def create_task(request):
     serializer = TaskCreateSerializer(data=request.data)
     if serializer.is_valid():
-        serializer.save()
-        # queue
-        publisher.publish("abc")
+        instance = serializer.save()
+        body = create_task_message(instance)
+        publisher.publish(task_id=str(instance.task_id), body=body)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
