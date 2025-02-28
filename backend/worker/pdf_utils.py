@@ -1,12 +1,14 @@
 import os
+import zipfile
 
 import fitz
+from django.conf import settings
 from minio import Minio
 from nanoid import generate
 
 # Region: Configurations
-INPUT_BUCKET_NAME = "media"
-OUTPUT_BUCKET_NAME = "output"
+INPUT_BUCKET_NAME = settings.INPUT_BUCKET_NAME
+OUTPUT_BUCKET_NAME = settings.OUTPUT_BUCKET_NAME
 
 MINIO_HOST = os.getenv("MINIO_HOST", "localhost:9000")
 MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
@@ -29,7 +31,7 @@ minio_client = Minio(
 # EndRegion
 
 
-def process_pdf_task(data: dict) -> list[str]:
+def process_pdf_task(data: dict) -> str:
     """Main entry point for PDF processing tasks"""
     input_objects = data.get("input_files", [])
     tool_type = data.get("tool", "")
@@ -54,12 +56,13 @@ def process_pdf_task(data: dict) -> list[str]:
     finally:
         # Cleanup all temporary files
         cleanup_files(local_input_paths + output_paths)
+        pass
 
 
-def process_pdf_merge(input_paths: list[str], output_paths: list[str]) -> list[str]:
+def process_pdf_merge(input_paths: list[str], output_paths: list[str]) -> str:
     """Merge multiple PDF files into one"""
     try:
-        object_name, output_path = generate_output_path("merged")
+        object_name, output_path = gen_output_pdf_path("merged")
         output_paths.append(output_path)
 
         # Merge PDF logic
@@ -73,50 +76,71 @@ def process_pdf_merge(input_paths: list[str], output_paths: list[str]) -> list[s
 
         # Upload result
         upload_object_to_minio(output_path, object_name)
-        return [object_name]
+        return object_name
     except Exception as e:
         raise RuntimeError(f"Merging failed: {str(e)}")
 
 
 def process_pdf_split(
     input_path: str, ranges: list[dict], output_paths: list[str]
-) -> list[str]:
-    """Split PDF into multiple ranges"""
+) -> str:
+    """Split PDF into multiple ranges and upload as a single zip to MinIO"""
     if not ranges:
         raise ValueError("No page ranges specified")
 
     try:
-        result_objects = []
+        split_files = []
         with fitz.open(input_path) as src_doc:
             total_pages = len(src_doc)
 
-            for _, range_spec in enumerate(ranges):
+            for range_spec in ranges:
                 start = max(1, range_spec.get("start", 1))
                 end = min(total_pages, range_spec.get("end", total_pages))
 
                 if start > end:
                     raise ValueError(f"Invalid range {start}-{end}")
 
-                object_name, output_path = generate_output_path(f"split_{start}-{end}")
+                # Generate output path for the split file
+                prefix = f"split_{start}-{end}"
+                object_name, output_path = gen_output_pdf_path(prefix)
                 output_paths.append(output_path)
 
-                # Extract pages
+                # Extract pages and save the split file
                 new_doc = fitz.open()
                 new_doc.insert_pdf(src_doc, from_page=start - 1, to_page=end - 1)
                 new_doc.save(output_path, garbage=3, deflate=True)
                 new_doc.close()
 
-                # Upload result
-                upload_object_to_minio(output_path, object_name)
-                result_objects.append(object_name)
+                # Collect split file info for zipping
+                split_files.append((output_path, object_name))
 
-        return result_objects
+            # Generate zip file name and path
+            zip_prefix = "split_bundle"
+            zip_object_name, zip_output_path = gen_output_zip_path(zip_prefix)
+            output_paths.append(zip_output_path)
+
+            # Create zip file and add all split files
+            with zipfile.ZipFile(zip_output_path, "w") as zipf:
+                for local_path, filename_in_zip in split_files:
+                    zipf.write(local_path, arcname=filename_in_zip)
+
+            # Upload the zip file to MinIO
+            upload_object_to_minio(zip_output_path, zip_object_name)
+
+        return zip_object_name
     except Exception as e:
         raise RuntimeError(f"Splitting failed: {str(e)}")
 
 
 # Region: Helper functions
-def generate_output_path(prefix: str) -> tuple[str, str]:
+def gen_output_zip_path(prefix: str) -> tuple[str, str]:
+    """Generate unique output path and object name"""
+    unique_id = generate(size=10)
+    object_name = f"{unique_id}_{prefix}.zip"
+    return object_name, os.path.join(OUTPUT_DIR, object_name)
+
+
+def gen_output_pdf_path(prefix: str) -> tuple[str, str]:
     """Generate unique output path and object name"""
     unique_id = generate(size=10)
     object_name = f"{unique_id}_{prefix}.pdf"

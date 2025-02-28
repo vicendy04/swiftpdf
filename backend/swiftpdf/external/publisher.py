@@ -1,16 +1,27 @@
 import json
 
 import pika
+from django.conf import settings
 
-RABBITMQ_URL = "amqp://guest:guest@localhost:5672/"
-parameters = pika.URLParameters(RABBITMQ_URL)
-request_exchange = "request_exchange"
+parameters = pika.URLParameters(settings.RABBITMQ_URL)
+request_exchange = settings.RABBITMQ_CONFIG["REQUEST_EXCHANGE"]
+
+
+_publisher = None
+
+
+def get_publisher():
+    global _publisher
+    if _publisher is None:
+        _publisher = Publisher()
+    return _publisher
 
 
 class Publisher:
     def __init__(self) -> None:
         self.connection = pika.BlockingConnection(parameters)
         self.channel = self.connection.channel()
+        # declare something if need
 
     def publish(self, task_id: str, body: dict) -> None:
         properties = pika.BasicProperties(
@@ -25,3 +36,7 @@ class Publisher:
             body=json.dumps(body),
             properties=properties,
         )
+
+    def close(self):
+        if self.connection and self.connection.is_open:
+            self.connection.close()

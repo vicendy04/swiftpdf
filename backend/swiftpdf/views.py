@@ -4,13 +4,11 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from .external.minio import get_get_url, get_put_url
+from .external.publisher import get_publisher
 from .helper import create_task_message
-from .messaging.publisher import Publisher
 from .models import Task
-from .serializers import TaskCreateSerializer, TaskSerializer, UploadInitSerializer
-from .services.minio import get_put_url
-
-publisher = Publisher()
+from .serializers import FileSerializer, TaskCreateSerializer, TaskSerializer
 
 
 @api_view(["GET"])
@@ -26,6 +24,7 @@ def create_task(request):
     if serializer.is_valid():
         instance = serializer.save()
         body = create_task_message(instance)
+        publisher = get_publisher()
         publisher.publish(task_id=str(instance.task_id), body=body)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -33,9 +32,19 @@ def create_task(request):
 
 @api_view(["GET"])
 def init_upload(request):
-    pub_filename = generate(size=10) + ".pdf"
-    url = get_put_url(pub_filename, 5)
-    serializer = UploadInitSerializer(data={"pub_filename": pub_filename, "url": url})
+    filename = f"{generate(size=10)}.pdf"
+    url = get_put_url(filename, 5)
+    serializer = FileSerializer(data={"filename": filename, "url": url})
+    if serializer.is_valid():
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    return Response(serializer.errors, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(["GET"])
+def download_result(request, output_id):
+    filename = f"{output_id}.pdf"
+    url = get_get_url(filename, 5)
+    serializer = FileSerializer(data={"filename": filename, "url": url})
     if serializer.is_valid():
         return Response(serializer.data, status=status.HTTP_200_OK)
     return Response(serializer.errors, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

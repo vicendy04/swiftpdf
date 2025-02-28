@@ -1,19 +1,13 @@
 import json
+from datetime import datetime
 
 import pika
-from pdf_utils import process_pdf_task
+from django.conf import settings
 
-# REPLY_EXCHANGE = "replies"
+from .pdf_utils import process_pdf_task
 
-# rabbitmq_url = settings.RABBITMQ_URL
-# request_exchange = settings.REQUEST_EXCHANGE
-# queue_name = settings.REQUEST_QUEUE
-
-RABBITMQ_URL = "amqp://guest:guest@localhost:5672/"
-parameters = pika.URLParameters(RABBITMQ_URL)
-request_exchange = "request_exchange"
-request_queue = "request_queue"
-reply_exchange = "reply_exchange"
+config = settings.RABBITMQ_CONFIG
+parameters = pika.URLParameters(settings.RABBITMQ_URL)
 
 
 def main():
@@ -21,16 +15,16 @@ def main():
     channel = connection.channel()
 
     # Declare queue to consume if not exist
-    channel.queue_declare(queue=request_queue)
+    channel.queue_declare(queue=config["REQUEST_QUEUE"])
     channel.queue_bind(
-        exchange=request_exchange,
-        queue=request_queue,
+        exchange=config["REQUEST_EXCHANGE"],
+        queue=config["REQUEST_QUEUE"],
         routing_key="process",
     )
 
     channel.basic_qos(prefetch_count=1)
     channel.basic_consume(
-        queue=request_queue, on_message_callback=callback, auto_ack=False
+        queue=config["REQUEST_QUEUE"], on_message_callback=callback, auto_ack=False
     )
 
     print("Result processor started. Waiting for results...")
@@ -47,19 +41,13 @@ def callback(channel, method, props, body):
         content_type="application/json",
         delivery_mode=pika.DeliveryMode.Persistent,
         correlation_id=props.correlation_id,
+        timestamp=int(datetime.now().timestamp()),
     )
     channel.basic_publish(
-        exchange=reply_exchange,
+        exchange=config["REPLY_EXCHANGE"],
         routing_key=props.reply_to,
         body=json.dumps(result_objects),
         properties=properties,
     )
 
     channel.basic_ack(delivery_tag=method.delivery_tag)
-
-
-if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("Interrupted")

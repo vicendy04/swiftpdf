@@ -1,22 +1,19 @@
 import json
-import threading
 import uuid
+from datetime import datetime, timezone
 
 import pika
+from django.conf import settings
 
 from ..models import Status, Task
 
-RABBITMQ_URL = "amqp://guest:guest@localhost:5672/"
-parameters = pika.URLParameters(RABBITMQ_URL)
-reply_exchange = "reply_exchange"
-reply_queue = "reply_queue"
+parameters = pika.URLParameters(settings.RABBITMQ_URL)
+reply_exchange = settings.RABBITMQ_CONFIG["REPLY_EXCHANGE"]
+reply_queue = settings.RABBITMQ_CONFIG["REPLY_QUEUE"]
 
 
-# works independently of Django
-class ResultListener(threading.Thread):
+class ResultListener:
     def __init__(self):
-        threading.Thread.__init__(self)
-
         self.connection = pika.BlockingConnection(parameters)
         self.channel = self.connection.channel()
 
@@ -37,6 +34,7 @@ class ResultListener(threading.Thread):
         task = Task.objects.get(task_id=uuid.UUID(props.correlation_id))
         task.status = Status.COMPLETED
         task.output_files = data
+        task.completed_at = datetime.fromtimestamp(props.timestamp, tz=timezone.utc)
         task.save()
         channel.basic_ack(delivery_tag=method.delivery_tag)
 

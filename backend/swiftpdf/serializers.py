@@ -36,6 +36,6 @@ class TaskCreateSerializer(serializers.ModelSerializer):
         return data
 
 
-class UploadInitSerializer(serializers.Serializer):
-    pub_filename = serializers.CharField(max_length=14)
+class FileSerializer(serializers.Serializer):
+    filename = serializers.CharField()
     url = serializers.URLField(allow_blank=True)
