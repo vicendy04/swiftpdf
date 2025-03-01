@@ -23,10 +23,15 @@ def create_task(request):
     serializer = TaskCreateSerializer(data=request.data)
     if serializer.is_valid():
         instance = serializer.save()
-        body = create_task_message(instance)
+        task_id, body = create_task_message(instance)
         publisher = get_publisher()
-        publisher.publish(task_id=str(instance.task_id), body=body)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        is_success = publisher.publish(task_id, body)
+        if is_success:
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        else:
+            return Response(
+                serializer.errors, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 

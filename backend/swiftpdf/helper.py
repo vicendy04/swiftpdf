@@ -1,4 +1,7 @@
-def create_task_message(task) -> dict:
+from .models import Task
+
+
+def create_task_message(task: Task) -> tuple[str, dict]:
     message = {
         "tool": task.tool,
         "input_files": task.input_files,
@@ -7,4 +10,4 @@ def create_task_message(task) -> dict:
     if hasattr(task, "ranges") and task.ranges:
         message["ranges"] = task.ranges
 
-    return message
+    return str(task.task_id), message

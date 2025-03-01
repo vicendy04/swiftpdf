@@ -145,8 +145,12 @@ USE_MINIO_HTTPS = False
 # RabbitMQ
 RABBITMQ_URL = os.getenv("RABBITMQ_URL ", "amqp://guest:guest@localhost:5672/")
 RABBITMQ_CONFIG = {
-    "REQUEST_EXCHANGE": "request_exchange",
-    "REPLY_EXCHANGE": "reply_exchange",
-    "REQUEST_QUEUE": "request_queue",
+    "PDF_EXCHANGE": "pdf_exchange",
+    "DLX_EXCHANGE": "dlx_exchange",
+    "PDF_QUEUE": "pdf_queue",
     "REPLY_QUEUE": "reply_queue",
+    "DLQ": "dlq",
+    "PDF_RK": "pdf.process",
+    "REPLY_RK": "pdf.complete",
+    "DLQ_RK": "dlx.pdf.failed",
 }

@@ -23,27 +23,10 @@ def setup_rabbitmq():
 
     with pika.BlockingConnection(parameters) as connection:
         with connection.channel() as channel:
-            channel.exchange_declare(
-                exchange=config["REQUEST_EXCHANGE"],
-                exchange_type="direct",
-            )
-            channel.exchange_declare(
-                exchange=config["REPLY_EXCHANGE"],
-                exchange_type="direct",
-            )
-
-            channel.queue_declare(queue=config["REQUEST_QUEUE"])
-            channel.queue_declare(queue=config["REPLY_QUEUE"])
-
-            channel.queue_bind(
-                queue=config["REQUEST_QUEUE"],
-                exchange=config["REQUEST_EXCHANGE"],
-                routing_key="process",
-            )
-            channel.queue_bind(
-                queue=config["REPLY_QUEUE"],
-                exchange=config["REPLY_EXCHANGE"],
-                routing_key="reply",
-            )
+            for exchange_name in [config["PDF_EXCHANGE"], config["DLX_EXCHANGE"]]:
+                channel.exchange_declare(
+                    exchange=exchange_name,
+                    exchange_type="direct",
+                )
 
             print("RabbitMQ setup completed successfully")
